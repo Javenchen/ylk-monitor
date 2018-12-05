@@ -11,9 +11,9 @@
 <body>
     111
     <img src="https://img.gta5-mods.com/q85-w800/images/f-22-raptor/9239eb-Grand%20Theft%20Auto%20V%2009.26.2017%20-%2016.57.07.13.jpg" alt="" srcset="">
-    <script>
+    <!-- <script>
            aaaa
-    </script>
+    </script> -->
     <script>
         // console.log(SDK)
         // import Monitor from '../index'
@@ -34,24 +34,23 @@
             console.log('afterMonitor');
         });
 
-        rep.on('performance', function (data) {
-            console.log(data);
-        });
-        // rep.reportByGet({ msg: '1111' }, function (data) {
+        // rep.on('performance', function (data) {
+        //     console.log(data);
+        // });
+
+        
+
+        rep.reportByGet({ msg: '1111' });
+       
+        rep.reportByGet({ msg: '2222' });
+        rep.reportByGet({ msg: '2222' });
+            // rep.report({msg:111},true)
+            aaaa
+        // setTimeout(()=>{
+        //     rep.reportByGet({ msg: '444' }, function (data) {
             
         // });
-        // rep.reportByGet({ msg: '2222' }, function (data) {
-            
-        // });
-        // rep.reportByGet({ msg: '3333' }, function (data) {
-            
-        // });
-     
-        setTimeout(()=>{
-            rep.reportByGet({ msg: '444' }, function (data) {
-            
-        });
-        },3500)
+        // },3500)
     </script>
 </body>
 

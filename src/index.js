@@ -36,6 +36,8 @@ import Monitor from './report'
 
 window.Monitor=Monitor
 
+
+
 // const rep = new Report({
 //   dataKey: 'err_msg', //上报数据的属性名，用于服务器获取数据
 //   mergeReport: true, // mergeReport 是否合并上报， false 关闭， true 启动（默认）

@@ -12,8 +12,9 @@ class Monitor extends Events {
       getPath: '',  // get请求路径
       postPath: '', // post请求路径
       random: 1,    // 抽样上报，1~0 之间数值，1为100%上报（默认 1）
-      performanceReport:false,
-      errorReport:false
+      defaultMethod: 'get',
+      performanceReport: false,
+      errorReport: false
     }
     this.config = utils.assignObject(config, options);
     this.queue = {
@@ -39,17 +40,25 @@ class Monitor extends Events {
       }
     }
 
-    if(this.config.errorReport){
+    if (this.config.errorReport) {
       //异常上报，重写onError
-      console.log('执行异常上报')
+      console.log('开启异常上报')
       this.errorReport.apply(this)
     }
   }
-  reportByGet(data) {
-    this.sendData('get', data);
+  report(data, instant) {
+    instant ? this.instantlyReport(this.config.defaultMethod, data) : this.sendData(this.config.defaultMethod, data);
   }
-  reportByPost(data) {
-    this.sendData('post', data);
+  reportByGet(data, instant) {
+    instant ? this.instantlyReport('get', data) : this.sendData('get', data);
+  }
+  reportByPost(data, instant) {
+    instant ? this.instantlyReport('post', data) : this.sendData('post', data);
+  }
+  //立即发送，跳过判定mergeReport
+  instantlyReport(type, data) {
+
+    this[type + 'Request'](utils.serializeObj(data));
   }
   sendData(type, data) {
     if (this.catchData(type, data)) {
@@ -57,11 +66,11 @@ class Monitor extends Events {
     }
   }
   delayReport(cb) {
-    if (!this.trigger('beforeReport')) return;
+    // if (!this.trigger('beforeReport')) return;
     let delay = this.config.mergeReport ? this.config.delay : 0;
     setTimeout(() => {
-      if (!this.trigger('beforeSend')) return;
-      this.report(cb);
+      // if (!this.trigger('beforeSend')) return;
+      this.reportSend(cb);
     }, delay);
   }
   // push数据到pool
@@ -73,18 +82,20 @@ class Monitor extends Events {
     this.queue[type].push(data);
     return this.queue[type];
   }
-  report(cb) {
+  reportSend(cb) {
     Promise.all([this.getRequest(), this.postRequest()]).then((urls) => {
       this.trigger('afterReport');
       cb && cb.call(this, urls);
     });
   }
-  getRequest() {
+  getRequest(instantData) {
+
     return new Promise((resolve) => {
-      if (this.queue.get.length === 0) {
+
+      if (this.queue.get.length === 0 && !instantData) {
         resolve();
       } else {
-        const parames = this._getParames('get');
+        const parames = instantData ? instantData : this._getParames('get');
         let url = this.getUrl + '?' + this.config.dataKey + '=' + parames;
         let img = new window.Image();
         img.onload = () => {
@@ -94,12 +105,12 @@ class Monitor extends Events {
       }
     })
   }
-  postRequest() {
+  postRequest(instantData) {
     return new Promise((resolve) => {
-      if (this.queue.post.length === 0) {
+      if (this.queue.post.length === 0 && !instantData) {
         resolve();
       } else {
-        const parames = this._getParames('post');
+        const parames = instantData ? instantData : this._getParames('post');
         const xmlhttp = new XMLHttpRequest();
         xmlhttp.onreadystatechange = () => {
           if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
@@ -130,26 +141,53 @@ class Monitor extends Events {
   }
   performanceReport() {
     // 获取performance navigation 对象
-    let timing=performance.getEntriesByType('navigation')[0]
-    let key,value;
-    let req={}
+    let timing = performance.getEntriesByType('navigation')[0]
+    let key, value;
+    let performanceOnbj = { reportType: 'performance' }
+    for (key in timing) {
+      if (typeof timing[key] === 'number') {
+        performanceOnbj[key] = timing[key].toFixed(2)
+      } else if (typeof timing[key] === 'string') {
+        performanceOnbj[key] = timing[key]
+      }
+    }
+    // 性能上报跳过random
+    this.queue['get'].push(performanceOnbj);
+  }
+  errorReport() {
+    var _this=this;
+    window.onerror = function (msg, url, rowNum, colNum, error) {
+      console.log(arguments)
 
-    for(key in timing){
-       if(typeof timing[key]==='number'){
-          req[key]=timing[key].toFixed(2)
-       }else if(typeof timing[key]==='string'){
-          req[key]=timing[key]
-       }
+      if (error && error.stack) {
+        var stackMsg = _this.processStackMsg(error);
+      }
+      let errorObj = {
+        reportType:'error',
+        msg,
+        url,
+        rowNum,
+        colNum,
+        stackMsg
+      }
+      // 异常错误不跳过random
+      _this.sendData('get',errorObj);
     }
-    console.log(req)
-    // console.log(this);
-    this.queue['get'].push();
   }
-  errorReport(){
-    window.onerror=function(msg,err){
-        console.log(arguments)
+  processStackMsg(error) {
+    var stack = error.stack
+      .replace(/\n/gi, "")
+      .split(/\bat\b/)
+      .slice(0, 9)
+      .join("@")
+      .replace(/\?[^:]+/gi, "");
+    var msg = error.toString();
+    if (stack.indexOf(msg) < 0) {
+      stack = msg + "@" + stack;
     }
+    return stack;
   }
+
 };
 
 export default Monitor;
