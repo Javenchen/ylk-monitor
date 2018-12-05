@@ -3,15 +3,21 @@ const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 
 module.exports = {
-    entry:'./src/index.js',
-    output: {
-        filename:'bundle.js',
-        path: path.resolve(__dirname, 'dist')
+    entry:{
+        'sdk':'./src/index.js'
     },
-    devtool: 'inline-source-map',
+    output: {
+        filename:'[name].js',
+        path: path.resolve(__dirname, 'dist'),
+        filename: 'sdk.js',
+        // library:"sdk",
+        libraryTarget:"window"
+    },
+    // devtool: 'inline-source-map',
     plugins: [
         new HtmlWebpackPlugin({
-            template:'./src/index.html'
+            template:'./src/index.html',
+            inject:"head"
         })
     ]
 };

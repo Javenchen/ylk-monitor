@@ -10,26 +10,48 @@
 
 <body>
     111
+    <img src="https://img.gta5-mods.com/q85-w800/images/f-22-raptor/9239eb-Grand%20Theft%20Auto%20V%2009.26.2017%20-%2016.57.07.13.jpg" alt="" srcset="">
     <script>
-
-        import Report from '../index'
-
-        const rep = new Report({
-            dataKey: 'err_msg', //上报数据的属性名，用于服务器获取数据
-            mergeReport: true, // mergeReport 是否合并上报， false 关闭， true 启动（默认）
-            delay: 1000, // 当 mergeReport 为 true 可用，延迟多少毫秒，合并缓冲区中的上报（默认）
+           aaaa
+    </script>
+    <script>
+        // console.log(SDK)
+        // import Monitor from '../index'
+    
+        const rep = new Monitor({
+            dataKey: 'ylk', //上报数据的属性名，用于服务器获取数据
+            mergeMonitor: true, // mergeMonitor 是否合并上报， false 关闭， true 启动（默认）
+            delay: 1000, // 当 mergeMonitor 为 true 可用，延迟多少毫秒，合并缓冲区中的上报（默认）
             url: 'http://localhost:80', // 指定错误上报地址
             getPath: '/read.gif', // get请求路径
             postPath: '/post/jserr', // post请求路径
             random: 1, // 抽样上报，1~0 之间数值，1为100%上报（默认 1）
+            performanceReport:true,
+            errorReport:true
         });
 
-        rep.on('afterReport', function () {
-            console.log('afterReport');
+        rep.on('afterMonitor', function () {
+            console.log('afterMonitor');
         });
-        rep.reportByPost({ msg: '1111' }, function (data) {
+
+        rep.on('performance', function (data) {
             console.log(data);
         });
+        // rep.reportByGet({ msg: '1111' }, function (data) {
+            
+        // });
+        // rep.reportByGet({ msg: '2222' }, function (data) {
+            
+        // });
+        // rep.reportByGet({ msg: '3333' }, function (data) {
+            
+        // });
+     
+        setTimeout(()=>{
+            rep.reportByGet({ msg: '444' }, function (data) {
+            
+        });
+        },3500)
     </script>
 </body>
 

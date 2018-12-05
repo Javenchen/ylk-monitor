@@ -1,8 +1,8 @@
 import Events from './events';
 import utils from './utils';
 
-class Report extends Events{
-  constructor( options ) {
+class Monitor extends Events {
+  constructor(options) {
     super();
     const config = {
       dataKey: '',  //上报数据的属性名，用于服务器获取数据
@@ -12,6 +12,8 @@ class Report extends Events{
       getPath: '',  // get请求路径
       postPath: '', // post请求路径
       random: 1,    // 抽样上报，1~0 之间数值，1为100%上报（默认 1）
+      performanceReport:false,
+      errorReport:false
     }
     this.config = utils.assignObject(config, options);
     this.queue = {
@@ -20,64 +22,86 @@ class Report extends Events{
     }
     this.getUrl = this.config.url + this.config.getPath;
     this.postUrl = this.config.url + this.config.postPath;
+
+    if (this.config.performanceReport) {
+      // 性能上报，在onload后执行
+      const oldOnload = window.onload
+      window.onload = e => {
+        if (oldOnload && typeof oldOnload === 'function') {
+          oldOnload(e)
+        }
+        // 尽量不影响页面主线程
+        if (window.requestIdleCallback) {
+          window.requestIdleCallback(this.performanceReport.bind(this))
+        } else {
+          setTimeout(this.performanceReport)
+        }
+      }
+    }
+
+    if(this.config.errorReport){
+      //异常上报，重写onError
+      console.log('执行异常上报')
+      this.errorReport.apply(this)
+    }
   }
-  reportByGet(data){
+  reportByGet(data) {
     this.sendData('get', data);
   }
-  reportByPost(data){
+  reportByPost(data) {
     this.sendData('post', data);
   }
-  sendData(type, data){
-    if(this.catchData(type, data)) {
+  sendData(type, data) {
+    if (this.catchData(type, data)) {
       this.delayReport();
     }
   }
-  delayReport(cb){
-    if (!this.trigger( 'beforeReport' ) ) return;
+  delayReport(cb) {
+    if (!this.trigger('beforeReport')) return;
     let delay = this.config.mergeReport ? this.config.delay : 0;
     setTimeout(() => {
-      if (!this.trigger( 'beforeSend' ) ) return;
+      if (!this.trigger('beforeSend')) return;
       this.report(cb);
     }, delay);
   }
   // push数据到pool
   catchData(type, data) {
     var rnd = Math.random();
-    if ( rnd >= this.config.random ) {
+    if (rnd >= this.config.random) {
       return false;
     }
     this.queue[type].push(data);
     return this.queue[type];
   }
   report(cb) {
-    Promise.all([this.getRequest(), this.postRequest()]).then((urls)=>{
+    Promise.all([this.getRequest(), this.postRequest()]).then((urls) => {
       this.trigger('afterReport');
       cb && cb.call(this, urls);
     });
   }
   getRequest() {
-    return new Promise((resolve)=>{
-      if(this.queue.get.length === 0){
+    return new Promise((resolve) => {
+      if (this.queue.get.length === 0) {
         resolve();
       } else {
         const parames = this._getParames('get');
         let url = this.getUrl + '?' + this.config.dataKey + '=' + parames;
         let img = new window.Image();
-        img.onload = ()=>{
+        img.onload = () => {
           resolve(parames);
         };
         img.src = url;
       }
     })
   }
-  postRequest(){
-    return new Promise((resolve)=>{
-      if(this.queue.post.length === 0){
+  postRequest() {
+    return new Promise((resolve) => {
+      if (this.queue.post.length === 0) {
         resolve();
       } else {
         const parames = this._getParames('post');
         const xmlhttp = new XMLHttpRequest();
-        xmlhttp.onreadystatechange = ()=>{
+        xmlhttp.onreadystatechange = () => {
           if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
             resolve(parames);
           }
@@ -90,17 +114,42 @@ class Report extends Events{
       }
     });
   }
-  _getParames(type){
+  _getParames(type) {
     const queue = this.queue[type];
     let mergeReport = this.config.mergeReport;
-    let curQueue = mergeReport ? queue : [ queue.shift() ];
-    if(mergeReport) this.queue[type] = [];
+    let curQueue = mergeReport ? queue : [queue.shift()];
+    if (mergeReport) this.queue[type] = [];
 
-    let parames = curQueue.map( obj => {
-      return utils.serializeObj( obj );
-    } ).join( '|' );
+    let parames = curQueue.map(obj => {
+      return utils.serializeObj(obj);
+    }).join('|');
     return parames
+  }
+  isFunction(fun) {
+
+  }
+  performanceReport() {
+    // 获取performance navigation 对象
+    let timing=performance.getEntriesByType('navigation')[0]
+    let key,value;
+    let req={}
+
+    for(key in timing){
+       if(typeof timing[key]==='number'){
+          req[key]=timing[key].toFixed(2)
+       }else if(typeof timing[key]==='string'){
+          req[key]=timing[key]
+       }
+    }
+    console.log(req)
+    // console.log(this);
+    this.queue['get'].push();
+  }
+  errorReport(){
+    window.onerror=function(msg,err){
+        console.log(arguments)
+    }
   }
 };
 
-export default Report;
+export default Monitor;
